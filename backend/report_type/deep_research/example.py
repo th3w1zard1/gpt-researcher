@@ -213,7 +213,7 @@ class DeepResearch:
         learnings: list[str] | None = None,
         citations: dict[str, str] | None = None,
         visited_urls: set[str] | None = None,
-        on_progress=None,
+        on_progress: Callable[[ResearchProgress], None] | None = None,
     ) -> dict[str, Any]:
         """Conduct deep iterative research."""
         if learnings is None:
@@ -315,8 +315,7 @@ class DeepResearch:
                 # Create next query from research goal and follow-up questions
                 next_query: str = f"""
                 Previous research goal: {result["researchGoal"]}
-                Follow-up questions: {" ".join(result["followUpQuestions"])}
-                """
+                Follow-up questions: {" ".join(result["followUpQuestions"])}"""
 
                 # Recursive research
                 deeper_results: dict[str, Any] = await self.deep_research(
@@ -353,12 +352,13 @@ class DeepResearch:
         )
 
         # Combine query and Q&A
-        follow_up_qa = ' '.join([f'Q: {q}\nA: {a}' for q, a in zip(follow_up_questions, answers)])
-        combined_query = f"""
+        follow_up_qa: str = " ".join(
+            [f"Q: {q}\nA: {a}" for q, a in zip(follow_up_questions, answers)]
+        )
+        combined_query: str = f"""
         Initial Query: {self.query}
         Follow-up Questions and Answers:
-        {follow_up_qa}
-        """
+        {follow_up_qa}"""
 
         # Run deep research
         results: dict[str, Any] = await self.deep_research(

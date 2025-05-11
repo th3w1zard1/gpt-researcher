@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import Any
 from .utils.file_formats import \
     write_md_to_pdf, \
     write_md_to_word, \
@@ -7,22 +9,34 @@ from .utils.views import print_agent_output
 
 
 class PublisherAgent:
-    def __init__(self, output_dir: str, websocket=None, stream_output=None, headers=None):
-        self.websocket = websocket
-        self.stream_output = stream_output
-        self.output_dir = output_dir.strip()
-        self.headers = headers or {}
-        
-    async def publish_research_report(self, research_state: dict, publish_formats: dict):
+    def __init__(
+        self,
+        output_dir: str,
+        websocket: Any | None = None,
+        stream_output: Any | None = None,
+        headers: dict[str, Any] | None = None,
+    ):
+        self.websocket: Any | None = websocket
+        self.stream_output: Any | None = stream_output
+        self.output_dir: str = output_dir.strip()
+        self.headers: dict[str, Any] = headers or {}
+
+    async def publish_research_report(
+        self,
+        research_state: dict[str, Any],
+        publish_formats: dict[str, Any],
+    ) -> str:
         layout = self.generate_layout(research_state)
         await self.write_report_by_formats(layout, publish_formats)
 
         return layout
 
-    def generate_layout(self, research_state: dict):
-        sections = '\n\n'.join(f"{value}"
-                                 for subheader in research_state.get("research_data")
-                                 for key, value in subheader.items())
+    def generate_layout(self, research_state: dict[str, Any]) -> str:
+        sections = '\n\n'.join(
+            f"{value}"
+            for subheader in research_state.get("research_data")
+            for key, value in subheader.items()
+        )
         references = '\n'.join(f"{reference}" for reference in research_state.get("sources"))
         headers = research_state.get("headers")
         layout = f"""# {headers.get('title')}
@@ -44,7 +58,11 @@ class PublisherAgent:
 """
         return layout
 
-    async def write_report_by_formats(self, layout:str, publish_formats: dict):
+    async def write_report_by_formats(
+        self,
+        layout: str,
+        publish_formats: dict[str, Any],
+    ):
         if publish_formats.get("pdf"):
             await write_md_to_pdf(layout, self.output_dir)
         if publish_formats.get("docx"):
@@ -52,7 +70,7 @@ class PublisherAgent:
         if publish_formats.get("markdown"):
             await write_text_to_md(layout, self.output_dir)
 
-    async def run(self, research_state: dict):
+    async def run(self, research_state: dict[str, Any]) -> dict[str, Any]:
         task = research_state.get("task")
         publish_formats = task.get("publish_formats")
         if self.websocket and self.stream_output:

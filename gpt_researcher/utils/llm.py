@@ -4,8 +4,9 @@ from __future__ import annotations
 import logging
 import os
 
-from typing import Any, Callable, Dict, Optional, TYPE_CHECKING
+from typing import Any, Callable, TYPE_CHECKING
 
+from gpt_researcher.llm_provider.generic.base import ReasoningEfforts
 from langchain.llms.base import BaseLLM
 from langchain.output_parsers import PydanticOutputParser
 from langchain.prompts import PromptTemplate
@@ -27,26 +28,26 @@ def get_llm(llm_provider: str, **kwargs) -> GenericLLMProvider:
 
 
 async def create_chat_completion(
-    messages: list,  # type: ignore
-    model: Optional[str] = None,
-    temperature: Optional[float] = 0.4,
-    max_tokens: Optional[int] = 4000,
-    llm_provider: Optional[str] = None,
-    stream: Optional[bool] = False,
+    messages: list[dict[str, str]],  # type: ignore
+    model: str | None = None,
+    temperature: float | None = 0.4,
+    max_tokens: int | None = 4000,
+    llm_provider: str | None = None,
+    stream: bool | None = False,
     websocket: Any | None = None,
-    llm_kwargs: Dict[str, Any] | None = None,
+    llm_kwargs: dict[str, Any] | None = None,
     cost_callback: Callable | None = None,
-    reasoning_effort: Optional[ReasoningEfforts] = None,
+    reasoning_effort: ReasoningEfforts | None = None,
     **kwargs,
 ) -> str:
     """Create a chat completion using the OpenAI API
     Args:
         messages (list[dict[str, str]]): The messages to send to the chat completion
-        model (str, optional): The model to use. Defaults to None.
-        temperature (float, optional): The temperature to use. Defaults to 0.4.
-        max_tokens (int, optional): The max tokens to use. Defaults to 4000.
-        stream (bool, optional): Whether to stream the response. Defaults to False.
-        llm_provider (str, optional): The LLM Provider to use.
+        model (str | None): The model to use. Defaults to None.
+        temperature (float | None): The temperature to use. Defaults to 0.4.
+        max_tokens (int | None): The max tokens to use. Defaults to 4000.
+        stream (bool | None): Whether to stream the response. Defaults to False.
+        llm_provider (str | None): The LLM Provider to use.
         webocket (WebSocket): The websocket used in the currect request,
         cost_callback: Callback function for updating cost
     Returns:
@@ -156,5 +157,5 @@ async def construct_subtopics(
         return output
 
     except Exception as e:
-        print("Exception in parsing subtopics : ", e)
+        print(f"Exception in parsing subtopics : {e.__class__.__name__}: {e}")
         return subtopics or []

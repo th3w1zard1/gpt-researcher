@@ -2,7 +2,8 @@ import os
 from typing import Any
 
 OPENAI_EMBEDDING_MODEL = os.environ.get(
-    "OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"
+    "OPENAI_EMBEDDING_MODEL",
+    "text-embedding-3-small",
 )
 
 _SUPPORTED_PROVIDERS = {
@@ -26,8 +27,13 @@ _SUPPORTED_PROVIDERS = {
 
 
 class Memory:
-    def __init__(self, embedding_provider: str, model: str, **embdding_kwargs: Any):
-        _embeddings = None
+    def __init__(
+        self,
+        embedding_provider: str,
+        model: str,
+        **embdding_kwargs: Any,
+    ):
+        _embeddings: Any = None
         match embedding_provider:
             case "custom":
                 from langchain_openai import OpenAIEmbeddings
@@ -122,5 +128,5 @@ class Memory:
 
         self._embeddings = _embeddings
 
-    def get_embeddings(self):
+    def get_embeddings(self) -> Any:
         return self._embeddings

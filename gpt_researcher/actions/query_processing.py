@@ -37,8 +37,7 @@ async def generate_sub_queries(
     cost_callback: Callable | None = None,
     prompt_family: type[PromptFamily] | PromptFamily = PromptFamily,
 ) -> list[str]:
-    """
-    Generate sub-queries using the specified LLM model.
+    """Generate sub-queries using the specified LLM model.
 
     Args:
         query: The original query

@@ -4,7 +4,15 @@ import json
 
 from typing import Any
 
-from .actions import add_references, choose_agent, extract_headers, extract_sections, get_retrievers, get_search_results, table_of_contents
+from .actions import (
+    add_references,
+    choose_agent,
+    extract_headers,
+    extract_sections,
+    get_retrievers,
+    get_search_results,
+    table_of_contents,
+)
 from .config import Config
 from .llm_provider import GenericLLMProvider
 from .memory import Memory
@@ -43,7 +51,7 @@ class GPTResearcher:
         visited_urls: set[str] | None = None,
         verbose: bool = True,
         context: list[dict[str, Any]] | None = None,
-        headers: dict | None = None,
+        headers: dict[str, Any] | None = None,
         max_subtopics: int = 5,
         log_handler: Any | None = None,
         prompt_family: str | None = None,
@@ -64,7 +72,7 @@ class GPTResearcher:
         self.research_images: list[dict[str, Any]] = []  # The list of selected research images
         self.documents: list[dict[str, Any]] = [] if documents is None else documents
         self.vector_store: VectorStoreWrapper | None = VectorStoreWrapper(vector_store) if vector_store else None
-        self.vector_store_filter: list[str] | None = vector_store_filter
+        self.vector_store_filter: list[str] | None = [] if vector_store_filter is None else vector_store_filter
         self.websocket: Any | None = websocket
         self.agent: str | None = agent
         self.role: str | None = role
@@ -72,8 +80,8 @@ class GPTResearcher:
         self.subtopics: list[str] | None = subtopics
         self.visited_urls: set[str] = set() if visited_urls is None else visited_urls
         self.verbose: bool = verbose
-        self.context: list[dict[str, Any]] | None = context
-        self.headers: dict | None = headers
+        self.context: list[dict[str, Any]] | None = [] if context is None else context
+        self.headers: dict[str, Any] | None = {} if headers is None else headers
         self.research_costs: float = 0.0
         self.retrievers: list[Any] = get_retrievers(self.headers, self.cfg)
         self.memory: Memory = Memory(self.cfg.embedding_provider, self.cfg.embedding_model, **self.cfg.embedding_kwargs)
@@ -109,8 +117,17 @@ class GPTResearcher:
 
                 logging.getLogger("research").error(f"Error in _log_event: {e.__class__.__name__}: {e}", exc_info=True)
 
-    async def conduct_research(self):
-        await self._log_event("research", step="start", details={"query": self.query, "report_type": self.report_type, "agent": self.agent, "role": self.role})
+    async def conduct_research(self) -> list[dict[str, Any]]:
+        await self._log_event(
+            "research",
+            step="start",
+            details={
+                "query": self.query,
+                "report_type": self.report_type,
+                "agent": self.agent,
+                "role": self.role,
+            },
+        )
 
         if not (self.agent and self.role):
             await self._log_event("action", action="choose_agent")
@@ -130,7 +147,15 @@ class GPTResearcher:
         await self._log_event("research", step="research_completed", details={"context_length": len(self.context)})
         return self.context
 
-    async def write_report(self, existing_headers: list = [], relevant_written_contents: list = [], ext_context=None) -> str:
+    async def write_report(
+        self,
+        existing_headers: list[str] | None = None,
+        relevant_written_contents: list[dict[str, Any]] | None = None,
+        ext_context: list[dict[str, Any]] | None = None,
+    ) -> str:
+        existing_headers: list[str] = [] if existing_headers is None else existing_headers
+        relevant_written_contents: list[dict[str, Any]] = [] if relevant_written_contents is None else relevant_written_contents
+        ext_context: list[dict[str, Any]] = [] if ext_context is None else ext_context
         await self._log_event("research", step="writing_report", details={"existing_headers": existing_headers, "context_source": "external" if ext_context else "internal"})
 
         report = await self.report_generator.write_report(existing_headers, relevant_written_contents, ext_context or self.context)
@@ -144,23 +169,34 @@ class GPTResearcher:
         await self._log_event("research", step="conclusion_completed")
         return conclusion
 
-    async def write_introduction(self):
+    async def write_introduction(self) -> str:
         await self._log_event("research", step="writing_introduction")
         intro = await self.report_generator.write_introduction()
         await self._log_event("research", step="introduction_completed")
         return intro
 
-    async def quick_search(self, query: str, query_domains: list[str] | None = None) -> list[Any]:
+    async def quick_search(
+        self,
+        query: str,
+        query_domains: list[str] | None = None,
+    ) -> list[Any]:
         return await get_search_results(query, self.retrievers[0], query_domains=query_domains)
 
-    async def get_subtopics(self):
+    async def get_subtopics(self) -> list[str]:
         return await self.report_generator.get_subtopics()
 
-    async def get_draft_section_titles(self, current_subtopic: str):
+    async def get_draft_section_titles(
+        self,
+        current_subtopic: str,
+    ) -> list[str]:
         return await self.report_generator.get_draft_section_titles(current_subtopic)
 
     async def get_similar_written_contents_by_draft_section_titles(
-        self, current_subtopic: str, draft_section_titles: list[str], written_contents: list[dict[str, Any]], max_results: int = 10
+        self,
+        current_subtopic: str,
+        draft_section_titles: list[str],
+        written_contents: list[dict[str, Any]],
+        max_results: int = 10,
     ) -> list[str]:
         return await self.context_manager.get_similar_written_contents_by_draft_section_titles(current_subtopic, draft_section_titles, written_contents, max_results)
 
@@ -198,7 +234,7 @@ class GPTResearcher:
     def get_costs(self) -> float:
         return self.research_costs
 
-    def set_verbose(self, verbose: bool):
+    def set_verbose(self, verbose: bool) -> None:
         self.verbose = verbose
 
     def add_costs(self, cost: float) -> None:

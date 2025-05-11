@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from fastapi import WebSocket
 from typing import Any
 
@@ -10,23 +12,23 @@ class BasicReport:
         query: str,
         report_type: str,
         report_source: str,
-        source_urls,
-        document_urls,
+        source_urls: list[str],
+        document_urls: list[str],
         tone: Any,
         config_path: str,
-        websocket: WebSocket,
-        headers=None
+        websocket: WebSocket | None = None,
+        headers: dict[str, Any] | None = None,
     ):
-        self.query = query
-        self.report_type = report_type
-        self.report_source = report_source
-        self.source_urls = source_urls
-        self.document_urls = document_urls
-        self.tone = tone
-        self.config_path = config_path
-        self.websocket = websocket
-        self.headers = headers or {}
-        self.researcher = None
+        self.query: str = query
+        self.report_type: str = report_type
+        self.report_source: str = report_source
+        self.source_urls: list[str] = source_urls
+        self.document_urls: list[str] = document_urls
+        self.tone: Any = tone
+        self.config_path: str = config_path
+        self.websocket: WebSocket | None = websocket
+        self.headers: dict[str, Any] = {} if headers is None else headers
+        self.researcher: GPTResearcher | None = None
 
     async def run(self):
         # Initialize researcher
@@ -40,7 +42,7 @@ class BasicReport:
             config_path=self.config_path,
             websocket=self.websocket,
             headers=self.headers,
-            visited_urls=set()  # Initialize visited_urls as an empty set
+            visited_urls=set(),
         )
 
         await self.researcher.conduct_research()

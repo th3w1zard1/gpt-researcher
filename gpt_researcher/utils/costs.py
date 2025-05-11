@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import tiktoken
 
 # Per OpenAI Pricing Page: https://openai.com/api/pricing/
@@ -22,4 +24,3 @@ def estimate_embedding_cost(model, docs):
     encoding = tiktoken.encoding_for_model(model)
     total_tokens = sum(len(encoding.encode(str(doc))) for doc in docs)
     return total_tokens * EMBEDDING_COST
-

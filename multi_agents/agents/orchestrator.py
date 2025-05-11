@@ -1,6 +1,8 @@
+from __future__ import annotations
 import os
 import time
 import datetime
+from typing import Any
 from langgraph.graph import StateGraph, END
 # from langgraph.checkpoint.memory import MemorySaver
 from .utils.views import print_agent_output
@@ -19,14 +21,21 @@ from . import \
 class ChiefEditorAgent:
     """Agent responsible for managing and coordinating editing tasks."""
 
-    def __init__(self, task: dict, websocket=None, stream_output=None, tone=None, headers=None):
-        self.task = task
-        self.websocket = websocket
-        self.stream_output = stream_output
-        self.headers = headers or {}
-        self.tone = tone
-        self.task_id = self._generate_task_id()
-        self.output_dir = self._create_output_directory()
+    def __init__(
+        self,
+        task: dict[str, Any],
+        websocket: Any | None = None,
+        stream_output: Any | None = None,
+        tone: Any | None = None,
+        headers: Any | None = None,
+    ):
+        self.task: dict[str, Any] = task
+        self.websocket: Any | None = websocket
+        self.stream_output: Any | None = stream_output
+        self.headers: dict[str, Any] = headers or {}
+        self.tone: Any | None = tone
+        self.task_id: int = self._generate_task_id()
+        self.output_dir: str = self._create_output_directory()
 
     def _generate_task_id(self):
         # Currently time based, but can be any unique identifier
@@ -49,7 +58,7 @@ class ChiefEditorAgent:
             "human": HumanAgent(self.websocket, self.stream_output, self.headers)
         }
 
-    def _create_workflow(self, agents):
+    def _create_workflow(self, agents: dict[str, Any]) -> StateGraph:
         workflow = StateGraph(ResearchState)
 
         # Add nodes for each agent
@@ -65,7 +74,7 @@ class ChiefEditorAgent:
 
         return workflow
 
-    def _add_workflow_edges(self, workflow):
+    def _add_workflow_edges(self, workflow: StateGraph):
         workflow.add_edge('browser', 'planner')
         workflow.add_edge('planner', 'human')
         workflow.add_edge('researcher', 'writer')
@@ -92,9 +101,8 @@ class ChiefEditorAgent:
         else:
             print_agent_output(message, "MASTER")
 
-    async def run_research_task(self, task_id=None):
-        """
-        Run a research task with the initialized research team.
+    async def run_research_task(self, task_id: Any | None = None):
+        """Run a research task with the initialized research team.
 
         Args:
             task_id (optional): The ID of the task to run.

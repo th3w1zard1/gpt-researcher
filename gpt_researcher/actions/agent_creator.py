@@ -1,33 +1,38 @@
+from __future__ import annotations
+from collections.abc import Callable
 import json
 import re
+from typing import Any
+from ..config.config import Config
 import json_repair
 from ..utils.llm import create_chat_completion
 from ..prompts import PromptFamily
 
 async def choose_agent(
-    query,
-    cfg,
-    parent_query=None,
-    cost_callback: callable = None,
-    headers=None,
+    query: str,
+    cfg: Config,
+    parent_query: str | None = None,
+    cost_callback: Callable | None = None,
+    headers: dict[str, Any] | None = None,
     prompt_family: type[PromptFamily] | PromptFamily = PromptFamily,
-):
-    """
-    Chooses the agent automatically
+) -> tuple[str, str]:
+    """Chooses the agent automatically.
+
     Args:
-        parent_query: In some cases the research is conducted on a subtopic from the main query.
-        The parent query allows the agent to know the main context for better reasoning.
         query: original query
         cfg: Config
+        parent_query: In some cases the research is conducted on a subtopic from the main query.
+        The parent query allows the agent to know the main context for better reasoning.
         cost_callback: callback for calculating llm costs
+        headers: headers for the request
         prompt_family: Family of prompts
 
     Returns:
         agent: Agent name
         agent_role_prompt: Agent role prompt
     """
-    query = f"{parent_query} - {query}" if parent_query else f"{query}"
-    response = None  # Initialize response to ensure it's defined
+    query: str = f"{parent_query} - {query}" if parent_query else f"{query}"
+    response: str | None = None  # Initialize response to ensure it's defined
 
     try:
         response = await create_chat_completion(
@@ -46,17 +51,17 @@ async def choose_agent(
         return agent_dict["server"], agent_dict["agent_role_prompt"]
 
     except Exception as e:
-        print("⚠️ Error in reading JSON, attempting to repair JSON")
+        print(f"⚠️ Error in reading JSON, attempting to repair JSON: {e.__class__.__name__}: {e}")
         return await handle_json_error(response)
 
 
-async def handle_json_error(response):
+async def handle_json_error(response: str) -> tuple[str, str]:
     try:
-        agent_dict = json_repair.loads(response)
+        agent_dict: dict[str, Any] = json_repair.loads(response)
         if agent_dict.get("server") and agent_dict.get("agent_role_prompt"):
             return agent_dict["server"], agent_dict["agent_role_prompt"]
     except Exception as e:
-        print(f"Error using json_repair: {e}")
+        print(f"Error using json_repair: {e.__class__.__name__}: {e}")
 
     json_string = extract_json_with_regex(response)
     if json_string:
@@ -64,7 +69,7 @@ async def handle_json_error(response):
             json_data = json.loads(json_string)
             return json_data["server"], json_data["agent_role_prompt"]
         except json.JSONDecodeError as e:
-            print(f"Error decoding JSON: {e}")
+            print(f"Error decoding JSON: {e.__class__.__name__}: {e}")
 
     print("No JSON found in the string. Falling back to Default Agent.")
     return "Default Agent", (
@@ -73,8 +78,8 @@ async def handle_json_error(response):
     )
 
 
-def extract_json_with_regex(response):
-    json_match = re.search(r"{.*?}", response, re.DOTALL)
+def extract_json_with_regex(response: str) -> str | None:
+    json_match: re.Match[str] | None = re.search(r"{.*?}", response, re.DOTALL)
     if json_match:
         return json_match.group(0)
     return None

@@ -1,7 +1,10 @@
+from __future__ import annotations
 import asyncio
-from typing import List, Dict, Any
-from ..config.config import Config
+from typing import Any, Callable
+
 from ..utils.llm import create_chat_completion
+
+from ..config.config import Config
 from ..utils.logger import get_formatted_logger
 from ..prompts import PromptFamily, get_prompt_by_report_type
 from ..utils.enum import Tone
@@ -14,12 +17,11 @@ async def write_report_introduction(
     context: str,
     agent_role_prompt: str,
     config: Config,
-    websocket=None,
-    cost_callback: callable = None,
+    websocket: Any | None = None,
+    cost_callback: Callable | None = None,
     prompt_family: type[PromptFamily] | PromptFamily = PromptFamily,
 ) -> str:
-    """
-    Generate an introduction for the report.
+    """Generate an introduction for the report.
 
     Args:
         query (str): The research query.
@@ -54,7 +56,7 @@ async def write_report_introduction(
         )
         return introduction
     except Exception as e:
-        logger.error(f"Error in generating report introduction: {e}")
+        logger.error(f"Error in generating report introduction: {e.__class__.__name__}: {e}")
     return ""
 
 
@@ -67,8 +69,7 @@ async def write_conclusion(
     cost_callback: callable = None,
     prompt_family: type[PromptFamily] | PromptFamily = PromptFamily,
 ) -> str:
-    """
-    Write a conclusion for the report.
+    """Write a conclusion for the report.
 
     Args:
         query (str): The research query.
@@ -89,9 +90,11 @@ async def write_conclusion(
                 {"role": "system", "content": f"{agent_role_prompt}"},
                 {
                     "role": "user",
-                    "content": prompt_family.generate_report_conclusion(query=query,
-                                                                        report_content=context,
-                                                                        language=config.language),
+                    "content": prompt_family.generate_report_conclusion(
+                        query=query,
+                        report_content=context,
+                        language=config.language,
+                    ),
                 },
             ],
             temperature=0.25,
@@ -104,7 +107,7 @@ async def write_conclusion(
         )
         return conclusion
     except Exception as e:
-        logger.error(f"Error in writing conclusion: {e}")
+        logger.error(f"Error in writing conclusion: {e.__class__.__name__}: {e}")
     return ""
 
 
@@ -113,11 +116,10 @@ async def summarize_url(
     content: str,
     role: str,
     config: Config,
-    websocket=None,
-    cost_callback: callable = None
+    websocket: Any | None = None,
+    cost_callback: Callable | None = None,
 ) -> str:
-    """
-    Summarize the content of a URL.
+    """Summarize the content of a URL.
 
     Args:
         url (str): The URL to summarize.
@@ -147,7 +149,7 @@ async def summarize_url(
         )
         return summary
     except Exception as e:
-        logger.error(f"Error in summarizing URL: {e}")
+        logger.error(f"Error in summarizing URL: {e.__class__.__name__}: {e}")
     return ""
 
 
@@ -157,12 +159,11 @@ async def generate_draft_section_titles(
     context: str,
     role: str,
     config: Config,
-    websocket=None,
-    cost_callback: callable = None,
+    websocket: Any | None = None,
+    cost_callback: Callable | None = None,
     prompt_family: type[PromptFamily] | PromptFamily = PromptFamily,
-) -> List[str]:
-    """
-    Generate draft section titles for the report.
+) -> list[str]:
+    """Generate draft section titles for the report.
 
     Args:
         query (str): The research query.
@@ -194,7 +195,7 @@ async def generate_draft_section_titles(
         )
         return section_titles.split("\n")
     except Exception as e:
-        logger.error(f"Error in generating draft section titles: {e}")
+        logger.error(f"Error in generating draft section titles: {e.__class__.__name__}: {e}")
     return []
 
 
@@ -205,17 +206,17 @@ async def generate_report(
     report_type: str,
     tone: Tone,
     report_source: str,
-    websocket,
-    cfg,
+    websocket: Any | None = None,
+    cfg: Config = None,
     main_topic: str = "",
-    existing_headers: list = [],
-    relevant_written_contents: list = [],
-    cost_callback: callable = None,
-    headers=None,
+    existing_headers: list[str] | None = None,
+    relevant_written_contents: list[dict[str, Any]] | None = None,
+    cost_callback: Callable | None = None,
+    headers: dict[str, Any] | None = None,
     prompt_family: type[PromptFamily] | PromptFamily = PromptFamily,
 ):
-    """
-    generates the final report
+    """Generates the final report.
+
     Args:
         query:
         context:
@@ -231,9 +232,11 @@ async def generate_report(
         prompt_family: Family of prompts
 
     Returns:
-        report:
-
+        report: The final report.
     """
+    existing_headers: list[str] = [] if existing_headers is None else existing_headers
+    relevant_written_contents: list[dict[str, Any]] = [] if relevant_written_contents is None else relevant_written_contents
+    headers: dict[str, Any] = {} if headers is None else headers
     generate_prompt = get_prompt_by_report_type(report_type, prompt_family)
     report = ""
 
@@ -272,6 +275,6 @@ async def generate_report(
                 cost_callback=cost_callback,
             )
         except Exception as e:
-            print(f"Error in generate_report: {e}")
+            print(f"Error in generate_report: {e.__class__.__name__}: {e}")
 
     return report

@@ -4,7 +4,7 @@ import json
 import os
 import warnings
 
-from typing import Any, List, Type, Union, get_args, get_origin
+from typing import Any, ClassVar, List, Union, get_args, get_origin
 
 from ..retrievers.utils import get_all_retriever_names
 from .variables.base import BaseConfig
@@ -14,7 +14,7 @@ from .variables.default import DEFAULT_CONFIG
 class Config:
     """Config class for GPT Researcher."""
 
-    CONFIG_DIR = os.path.join(os.path.dirname(__file__), "variables")
+    CONFIG_DIR: ClassVar[str] = os.path.join(os.path.dirname(__file__), "variables")
 
     def __init__(self, config_path: str | None = None):
         """Initialize the config class."""
@@ -127,7 +127,7 @@ class Config:
         """List all available configuration names."""
         configs: list[str] = ["default"]
         for file in os.listdir(cls.CONFIG_DIR):
-            if file.endswith(".json"):
+            if file.casefold().endswith(".json"):
                 configs.append(file[:-5])  # Remove .json extension
         return configs
 
@@ -173,7 +173,11 @@ class Config:
         os.makedirs(self.doc_path, exist_ok=True)
 
     @staticmethod
-    def convert_env_value(key: str, env_value: str, type_hint: Type) -> Any:
+    def convert_env_value(
+        key: str,
+        env_value: str,
+        type_hint: type,
+    ) -> Any:
         """Convert environment variable to the appropriate type based on the type hint."""
         origin: type | None = get_origin(type_hint)
         args: list[type] = get_args(type_hint)

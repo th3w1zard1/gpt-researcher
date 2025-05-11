@@ -1,21 +1,14 @@
 from __future__ import annotations
 
-import asyncio
 import importlib.util
-import json
-import os
 import subprocess
 import sys
-import traceback
-
-from enum import Enum
 from typing import Any
-
-import aiofiles
-
 from colorama import Fore, Style, init
+import os
+from enum import Enum
 
-_SUPPORTED_PROVIDERS: set[str] = {
+_SUPPORTED_PROVIDERS = {
     "openai",
     "anthropic",
     "azure_openai",
@@ -33,9 +26,11 @@ _SUPPORTED_PROVIDERS: set[str] = {
     "xai",
     "deepseek",
     "litellm",
+    "gigachat",
+    "openrouter"
 }
 
-NO_SUPPORT_TEMPERATURE_MODELS: list[str] = [
+NO_SUPPORT_TEMPERATURE_MODELS = [
     "deepseek/deepseek-reasoner",
     "o1-mini",
     "o1-mini-2024-09-12",
@@ -43,47 +38,26 @@ NO_SUPPORT_TEMPERATURE_MODELS: list[str] = [
     "o1-2024-12-17",
     "o3-mini",
     "o3-mini-2025-01-31",
-    "o4-mini",
-    "o1-preview",
+    "o1-preview"
 ]
 
-SUPPORT_REASONING_EFFORT_MODELS: list[str] = ["o3-mini", "o3-mini-2025-01-31o4-mini"]
-
+SUPPORT_REASONING_EFFORT_MODELS = [
+    "o3-mini",
+    "o3-mini-2025-01-31"
+]
 
 class ReasoningEfforts(Enum):
     High = "high"
     Medium = "medium"
     Low = "low"
 
-
-class ChatLogger:
-    """Helper utility to log all chat requests and their corresponding responses
-    plus the stack trace leading to the call.
-    """
-
-    def __init__(self, fname: str):
-        self.fname: str = fname
-        self._lock: asyncio.Lock = asyncio.Lock()
-
-    async def log_request(self, messages: list[dict[str, str]], response: str):
-        async with self._lock:
-            async with aiofiles.open(self.fname, mode="a", encoding="utf-8") as handle:
-                await handle.write(json.dumps({"messages": messages, "response": response, "stacktrace": traceback.format_exc()}) + "\n")
-
-
 class GenericLLMProvider:
-    def __init__(
-        self,
-        llm,
-        chat_log: str | None = None,
-        verbose: bool = True,
-    ):
-        self.llm = llm
-        self.chat_logger: ChatLogger | None = ChatLogger(chat_log) if chat_log else None
-        self.verbose: bool = verbose
+
+    def __init__(self, llm: Any):
+        self.llm: Any = llm
 
     @classmethod
-    def from_provider(cls, provider: str, chat_log: str | None = None, verbose: bool = True, **kwargs: Any) -> GenericLLMProvider:
+    def from_provider(cls, provider: str, **kwargs: Any):
         if provider == "openai":
             _check_pkg("langchain_openai")
             from langchain_openai import ChatOpenAI
@@ -125,6 +99,7 @@ class GenericLLMProvider:
             llm = ChatFireworks(**kwargs)
         elif provider == "ollama":
             _check_pkg("langchain_community")
+            _check_pkg("langchain_ollama")
             from langchain_ollama import ChatOllama
 
             llm = ChatOllama(base_url=os.environ["OLLAMA_BASE_URL"], **kwargs)
@@ -187,12 +162,12 @@ class GenericLLMProvider:
             _check_pkg("langchain_gigachat")
             from langchain_gigachat.chat_models import GigaChat
 
-            kwargs.pop("model", None)  # Use env GIGACHAT_MODEL=GigaChat-Max
+            kwargs.pop("model", None) # Use env GIGACHAT_MODEL=GigaChat-Max
             llm = GigaChat(**kwargs)
         elif provider == "openrouter":
             _check_pkg("langchain_openai")
-            from langchain_core.rate_limiters import InMemoryRateLimiter
             from langchain_openai import ChatOpenAI
+            from langchain_core.rate_limiters import InMemoryRateLimiter
 
             rps = float(os.environ["OPENROUTER_LIMIT_RPS"]) if "OPENROUTER_LIMIT_RPS" in os.environ else 1.0
 
@@ -211,27 +186,34 @@ class GenericLLMProvider:
 
         else:
             supported = ", ".join(_SUPPORTED_PROVIDERS)
-            raise ValueError(f"Unsupported {provider}.\n\nSupported model providers are: {supported}")
-        return cls(llm, chat_log, verbose=verbose)
+            raise ValueError(
+                f"Unsupported {provider}.\n\nSupported model providers are: {supported}"
+            )
+        return cls(llm)
 
-    async def get_chat_response(self, messages, stream, websocket=None):
+
+    async def get_chat_response(
+        self,
+        messages: list[dict[str, Any]],
+        stream: bool,
+        websocket: Any | None = None,
+    ) -> str:
         if not stream:
             # Getting output from the model chain using ainvoke for asynchronous invoking
             output = await self.llm.ainvoke(messages)
 
-            res = output.content
+            return output.content
 
         else:
-            res = await self.stream_response(messages, websocket)
+            return await self.stream_response(messages, websocket)
 
-        if self.chat_logger:
-            await self.chat_logger.log_request(messages, res)
-
-        return res
-
-    async def stream_response(self, messages, websocket=None):
-        paragraph = ""
-        response = ""
+    async def stream_response(
+        self,
+        messages: list[dict[str, Any]],
+        websocket: Any | None = None,
+    ) -> str:
+        paragraph: str = ""
+        response: str = ""
 
         # Streaming the response using the chain astream method from langchain
         async for chunk in self.llm.astream(messages):
@@ -248,10 +230,14 @@ class GenericLLMProvider:
 
         return response
 
-    async def _send_output(self, content, websocket=None):
+    async def _send_output(
+        self,
+        content: str,
+        websocket: Any | None = None,
+    ) -> None:
         if websocket is not None:
             await websocket.send_json({"type": "report", "output": content})
-        elif self.verbose:
+        else:
             print(f"{Fore.GREEN}{content}{Style.RESET_ALL}")
 
 
@@ -270,4 +256,7 @@ def _check_pkg(pkg: str) -> None:
             importlib.import_module(pkg)
 
         except subprocess.CalledProcessError:
-            raise ImportError(Fore.RED + f"Failed to install {pkg_kebab}. Please install manually with `pip install -U {pkg_kebab}`")
+            raise ImportError(
+                Fore.RED + f"Failed to install {pkg_kebab}. Please install manually with "
+                f"`pip install -U {pkg_kebab}`"
+            )

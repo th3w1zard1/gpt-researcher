@@ -1,13 +1,16 @@
+from __future__ import annotations
+
 import logging
 import json
 import os
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 class JSONResearchHandler:
-    def __init__(self, json_file):
-        self.json_file = json_file
-        self.research_data = {
+    def __init__(self, json_file: os.PathLike | str):
+        self.json_file: os.PathLike | str = json_file
+        self.research_data: dict[str, Any] = {
             "timestamp": datetime.now().isoformat(),
             "events": [],
             "content": {
@@ -19,7 +22,7 @@ class JSONResearchHandler:
             }
         }
 
-    def log_event(self, event_type: str, data: dict):
+    def log_event(self, event_type: str, data: dict[str, Any]):
         self.research_data["events"].append({
             "timestamp": datetime.now().isoformat(),
             "type": event_type,
@@ -27,7 +30,7 @@ class JSONResearchHandler:
         })
         self._save_json()
 
-    def update_content(self, key: str, value):
+    def update_content(self, key: str, value: Any):
         self.research_data["content"][key] = value
         self._save_json()
 
@@ -76,8 +79,8 @@ def setup_research_logging():
     return str(log_file), str(json_file), research_logger, json_handler
 
 # Create a function to get the logger and JSON handler
-def get_research_logger():
+def get_research_logger() -> logging.Logger:
     return logging.getLogger('research')
 
-def get_json_handler():
+def get_json_handler() -> JSONResearchHandler | None:
     return getattr(logging.getLogger('research'), 'json_handler', None)

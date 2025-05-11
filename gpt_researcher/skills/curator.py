@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Dict, Optional, List
 import json
 from ..config.config import Config
